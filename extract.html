@@ -2,27 +2,1024 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Extract Message</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StegoVault | Extract Message</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <link rel="stylesheet" href="css/extract.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #020b18;
+            --bg-card: rgba(4, 20, 40, 0.88);
+            --accent-cyan: #00f5ff;
+            --accent-green: #00ff88;
+            --accent-orange: #ff6b35;
+            --text-primary: #e2f0ff;
+            --text-secondary: #6b8caa;
+            --border: rgba(0,255,136,0.14);
+            --grid-color: rgba(0,255,136,0.03);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: -20%;
+            right: 20%;
+            width: 600px; height: 400px;
+            background: radial-gradient(ellipse, rgba(0,150,80,0.10) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .scanline {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-green), transparent);
+            opacity: 0.3;
+            animation: scanline 5s linear infinite;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        @keyframes scanline {
+            0% { top: 0; }
+            100% { top: 100vh; }
+        }
+
+        /* TOPBAR */
+        .topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 52px;
+            background: rgba(2,11,24,0.95);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(0,255,136,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            z-index: 100;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .topbar-logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            letter-spacing: 3px;
+            text-decoration: none;
+        }
+
+        .breadcrumb {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breadcrumb-sep { color: var(--accent-green); opacity: 0.4; }
+        .breadcrumb-current { color: var(--accent-green); }
+
+        .topbar-mode {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent-green);
+            border: 1px solid rgba(0,255,136,0.25);
+            padding: 4px 12px;
+            border-radius: 2px;
+            background: rgba(0,255,136,0.05);
+            letter-spacing: 2px;
+        }
+
+        /* LAYOUT */
+        .main-layout {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            padding: 80px 20px 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+            align-items: start;
+        }
+
+        /* PANEL */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            animation: fadeIn 0.6s ease both;
+        }
+
+        .panel-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,255,136,0.025);
+        }
+
+        .panel-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            letter-spacing: 2px;
+        }
+
+        .panel-body { padding: 24px; }
+
+        /* DROP ZONE */
+        .drop-zone {
+            position: relative;
+            border: 2px dashed rgba(0,255,136,0.2);
+            border-radius: 6px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(0,255,136,0.02);
+            margin-bottom: 20px;
+        }
+
+        .drop-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0,255,136,0.04) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent-green);
+            background: rgba(0,255,136,0.05);
+        }
+
+        .drop-zone:hover::before, .drop-zone.dragover::before { opacity: 1; }
+
+        .drop-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            display: block;
+            opacity: 0.7;
+        }
+
+        .drop-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-green);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .drop-sub {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .drop-btn {
+            display: inline-block;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-green);
+            border: 1px solid rgba(0,255,136,0.3);
+            padding: 6px 16px;
+            border-radius: 2px;
+            letter-spacing: 1.5px;
+            background: rgba(0,255,136,0.05);
+            transition: all 0.2s;
+        }
+
+        .drop-zone:hover .drop-btn { background: rgba(0,255,136,0.1); }
+
+        #extractImageInput { display: none; }
+
+        /* File preview */
+        .file-preview {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0,255,136,0.04);
+            border: 1px solid rgba(0,255,136,0.15);
+            border-radius: 4px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+        }
+
+        .file-preview.show { display: flex; }
+
+        .file-thumb {
+            width: 40px; height: 40px;
+            border-radius: 3px;
+            object-fit: cover;
+            border: 1px solid rgba(0,255,136,0.2);
+        }
+
+        .file-info { flex: 1; }
+        .file-name {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent-green);
+            word-break: break-all;
+        }
+        .file-size { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+
+        .file-remove {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+
+        .file-remove:hover { color: var(--accent-orange); }
+
+        /* FORM FIELDS */
+        .field-group { margin-bottom: 18px; }
+
+        .field-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .field-label-dot {
+            width: 4px; height: 4px;
+            background: var(--accent-green);
+            border-radius: 50%;
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(0,255,136,0.15);
+            border-radius: 4px;
+            padding: 11px 14px;
+            color: var(--text-primary);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            resize: none;
+        }
+
+        .input-field:focus {
+            border-color: rgba(0,255,136,0.5);
+            box-shadow: 0 0 0 3px rgba(0,255,136,0.06), inset 0 0 12px rgba(0,255,136,0.02);
+        }
+
+        .input-field::placeholder { color: rgba(107,140,170,0.5); }
+
+        .input-field[readonly] {
+            background: rgba(0,0,0,0.4);
+            cursor: default;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-green);
+        }
+
+        /* PASSWORD FIELD */
+        .password-wrapper { position: relative; }
+        .password-wrapper .input-field { padding-right: 44px; }
+
+        .toggle-pass {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+
+        .toggle-pass:hover { color: var(--accent-green); }
+
+        /* SUBMIT BUTTON */
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #006644, var(--accent-green));
+            border: none;
+            border-radius: 4px;
+            color: #020b18;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.4s;
+        }
+
+        .submit-btn:hover::before { left: 100%; }
+        .submit-btn:hover { box-shadow: 0 0 24px rgba(0,255,136,0.4); transform: translateY(-1px); }
+        .submit-btn:active { transform: translateY(0); }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* PROGRESS BAR */
+        .progress-wrap {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .progress-wrap.show { display: block; }
+
+        .progress-bar-bg {
+            background: rgba(0,255,136,0.08);
+            border-radius: 2px;
+            height: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #006644, var(--accent-green));
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 8px var(--accent-green);
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* STATUS */
+        .status-box {
+            display: none;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-top: 16px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.5px;
+            line-height: 1.5;
+            animation: statusIn 0.3s ease;
+        }
+
+        .status-box.show { display: flex; }
+
+        @keyframes statusIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status-box.processing {
+            background: rgba(0,245,255,0.06);
+            border: 1px solid rgba(0,245,255,0.2);
+            color: var(--accent-cyan);
+        }
+
+        .status-box.success {
+            background: rgba(0,255,136,0.06);
+            border: 1px solid rgba(0,255,136,0.2);
+            color: var(--accent-green);
+        }
+
+        .status-box.error {
+            background: rgba(255,68,68,0.06);
+            border: 1px solid rgba(255,68,68,0.2);
+            color: #ff6b6b;
+        }
+
+        .status-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+        /* OUTPUT AREA */
+        .output-wrap {
+            display: none;
+            margin-top: 16px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .output-wrap.show { display: block; }
+
+        .output-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .output-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent-green);
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .output-label::before {
+            content: '';
+            width: 4px; height: 4px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 6px var(--accent-green);
+        }
+
+        .copy-btn {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            background: rgba(0,255,136,0.06);
+            border: 1px solid rgba(0,255,136,0.15);
+            border-radius: 2px;
+            padding: 4px 10px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            color: var(--accent-green);
+            border-color: rgba(0,255,136,0.3);
+        }
+
+        .decrypted-msg {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 4px;
+            padding: 16px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--accent-green);
+            line-height: 1.7;
+            min-height: 80px;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        /* TYPE EFFECT */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px; height: 14px;
+            background: var(--accent-green);
+            animation: blink 1s step-start infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+
+        /* RIGHT PANEL */
+        .meta-panel { position: sticky; top: 72px; }
+
+        .img-preview-wrap {
+            position: relative;
+            min-height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #previewImg {
+            max-width: 100%;
+            max-height: 380px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .canvas-placeholder {
+            text-align: center;
+        }
+
+        .placeholder-icon {
+            font-size: 3rem;
+            opacity: 0.2;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .placeholder-text {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            letter-spacing: 1.5px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .info-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(0,255,136,0.08);
+            border-radius: 4px;
+            padding: 10px 12px;
+        }
+
+        .info-card-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.58rem;
+            color: var(--text-secondary);
+            letter-spacing: 1.5px;
+            margin-bottom: 3px;
+        }
+
+        .info-card-value {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--accent-green);
+        }
+
+        .info-card-value.dim { color: var(--text-secondary); }
+
+        /* SCAN ANIMATION OVERLAY */
+        .scan-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .scan-overlay.active { display: block; }
+
+        .scan-line-anim {
+            position: absolute;
+            left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-green), transparent);
+            opacity: 0.7;
+            animation: scanImg 1.5s linear infinite;
+        }
+
+        @keyframes scanImg {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        /* HOME LINK */
+        .home-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-top: 16px;
+            padding: 8px 12px;
+            border: 1px solid rgba(0,255,136,0.08);
+            border-radius: 4px;
+            transition: all 0.2s;
+            letter-spacing: 1px;
+        }
+
+        .home-link:hover {
+            color: var(--accent-green);
+            border-color: rgba(0,255,136,0.25);
+            background: rgba(0,255,136,0.04);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel:nth-child(2) { animation-delay: 0.15s; }
+
+        @media (max-width: 768px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .meta-panel { position: static; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="title">Extract a Message</h1>
-        <p class="label">Choose the PNG Image:</p>
-        <input type="file" id="extractImageInput" accept="image/png" class="input-file">
-        <p class="label">Key for the Decryption:</p>
-        <input type="password" id="decryptionKeyInput" placeholder="Decryption Key" class="input-password">
-        <button id="extractBtn" class="button">Extract</button>
-        <p id="extractStatus" class="status-message"></p>
-        <p class="label">Extracted Message:</p>
-        <textarea id="extractedMessageOutput" rows="3" readonly class="output-textarea"></textarea>
+    <div class="scanline"></div>
 
-        <div class="home-link-wrapper">
-            <a href="index.html" class="home-link">Go to Home Page</a>
+    <div class="topbar">
+        <div class="topbar-left">
+            <a href="index.html" class="topbar-logo">StegoVault</a>
+            <div class="breadcrumb">
+                <span class="breadcrumb-sep">/</span>
+                <span class="breadcrumb-current">EXTRACT MESSAGE</span>
+            </div>
+        </div>
+        <div class="topbar-mode">DECODE MODE</div>
+    </div>
+
+    <div class="main-layout">
+        <!-- LEFT: FORM -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-dot"></div>
+                <div class="panel-title">PAYLOAD EXTRACTION</div>
+            </div>
+            <div class="panel-body">
+
+                <div class="drop-zone" id="dropZone">
+                    <span class="drop-icon">◈</span>
+                    <div class="drop-title">SELECT STEGO IMAGE</div>
+                    <p class="drop-sub">Drag and drop a PNG stego image</p>
+                    <div class="drop-btn">BROWSE FILES</div>
+                    <input type="file" id="extractImageInput" accept="image/png">
+                </div>
+
+                <div class="file-preview" id="filePreview">
+                    <img class="file-thumb" id="fileThumb" src="" alt="">
+                    <div class="file-info">
+                        <div class="file-name" id="fileName">—</div>
+                        <div class="file-size" id="fileSize">—</div>
+                    </div>
+                    <button class="file-remove" id="fileRemove">✕</button>
+                </div>
+
+                <div class="field-group">
+                    <div class="field-label">
+                        <div class="field-label-dot"></div>
+                        DECRYPTION KEY
+                    </div>
+                    <div class="password-wrapper">
+                        <input type="password" id="decryptionKeyInput" class="input-field" placeholder="Enter the decryption key...">
+                        <button class="toggle-pass" id="togglePass" title="Toggle visibility">👁</button>
+                    </div>
+                </div>
+
+                <button class="submit-btn" id="extractBtn">EXTRACT PAYLOAD</button>
+
+                <div class="progress-wrap" id="progressWrap">
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-label">
+                        <span id="progressStage">INITIALIZING...</span>
+                        <span id="progressPct">0%</span>
+                    </div>
+                </div>
+
+                <div class="status-box" id="extractStatus">
+                    <div class="status-icon" id="statusIcon"></div>
+                    <div id="statusText"></div>
+                </div>
+
+                <div class="output-wrap" id="outputWrap">
+                    <div class="output-header">
+                        <div class="output-label">DECRYPTED MESSAGE</div>
+                        <button class="copy-btn" id="copyBtn">COPY</button>
+                    </div>
+                    <div class="decrypted-msg" id="decryptedMsg"></div>
+                </div>
+
+                <a href="index.html" class="home-link">← RETURN TO BASE</a>
+            </div>
+        </div>
+
+        <!-- RIGHT: META INFO -->
+        <div class="panel meta-panel">
+            <div class="panel-header">
+                <div class="panel-dot"></div>
+                <div class="panel-title">IMAGE ANALYSIS</div>
+            </div>
+            <div class="panel-body">
+                <div class="img-preview-wrap" id="previewWrap">
+                    <img id="previewImg" src="" alt="Stego Image">
+                    <div class="scan-overlay" id="scanOverlay">
+                        <div class="scan-line-anim"></div>
+                    </div>
+                    <div class="canvas-placeholder" id="canvasPlaceholder">
+                        <span class="placeholder-icon">◈</span>
+                        <div class="placeholder-text">AWAITING STEGO IMAGE</div>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-card-label">DIMENSIONS</div>
+                        <div class="info-card-value" id="imgDimensions">—</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-label">FILE SIZE</div>
+                        <div class="info-card-value" id="imgFileSize">—</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-label">TOTAL PIXELS</div>
+                        <div class="info-card-value" id="imgPixels">—</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-label">STATUS</div>
+                        <div class="info-card-value dim" id="imgStatus">AWAITING INPUT</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script src="js/extract.js"></script>
+    <script>
+        const extractImageInput = document.getElementById('extractImageInput');
+        const decryptionKeyInput = document.getElementById('decryptionKeyInput');
+        const extractBtn = document.getElementById('extractBtn');
+        const dropZone = document.getElementById('dropZone');
+        const filePreview = document.getElementById('filePreview');
+        const progressWrap = document.getElementById('progressWrap');
+        const progressFill = document.getElementById('progressFill');
+        const progressStage = document.getElementById('progressStage');
+        const progressPct = document.getElementById('progressPct');
+        const statusBox = document.getElementById('extractStatus');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusText = document.getElementById('statusText');
+        const outputWrap = document.getElementById('outputWrap');
+        const decryptedMsg = document.getElementById('decryptedMsg');
+        const scanOverlay = document.getElementById('scanOverlay');
+        const END_OF_MESSAGE = '#####END_OF_MESSAGE#####';
+
+        const stringToBinary = (str) => str.split('').map(c => c.charCodeAt(0).toString(2).padStart(8,'0')).join('');
+        const binaryToString = (bin) => {
+            let str = '';
+            for (let i = 0; i < bin.length; i += 8)
+                str += String.fromCharCode(parseInt(bin.substring(i, i + 8), 2));
+            return str;
+        };
+
+        let currentFile = null;
+
+        // Drop zone
+        dropZone.addEventListener('click', () => extractImageInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'image/png') handleFile(file);
+            else showStatus('error', '✕', 'INVALID FILE TYPE — PNG ONLY');
+        });
+
+        extractImageInput.addEventListener('change', () => {
+            if (extractImageInput.files[0]) handleFile(extractImageInput.files[0]);
+        });
+
+        function handleFile(file) {
+            currentFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('fileThumb').src = e.target.result;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = formatBytes(file.size);
+                filePreview.classList.add('show');
+                dropZone.style.display = 'none';
+
+                const img = new Image();
+                img.onload = () => {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('previewImg').style.display = 'block';
+                    document.getElementById('canvasPlaceholder').style.display = 'none';
+                    document.getElementById('imgDimensions').textContent = `${img.width}×${img.height}`;
+                    document.getElementById('imgFileSize').textContent = formatBytes(file.size);
+                    document.getElementById('imgPixels').textContent = (img.width * img.height).toLocaleString();
+                    document.getElementById('imgStatus').textContent = 'LOADED';
+                    document.getElementById('imgStatus').style.color = 'var(--accent-green)';
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('fileRemove').addEventListener('click', () => {
+            currentFile = null;
+            filePreview.classList.remove('show');
+            dropZone.style.display = '';
+            document.getElementById('previewImg').style.display = 'none';
+            document.getElementById('canvasPlaceholder').style.display = '';
+            document.getElementById('imgDimensions').textContent = '—';
+            document.getElementById('imgFileSize').textContent = '—';
+            document.getElementById('imgPixels').textContent = '—';
+            document.getElementById('imgStatus').textContent = 'AWAITING INPUT';
+            document.getElementById('imgStatus').style.color = '';
+            extractImageInput.value = '';
+            outputWrap.classList.remove('show');
+            statusBox.className = 'status-box';
+        });
+
+        document.getElementById('togglePass').addEventListener('click', () => {
+            const type = decryptionKeyInput.type === 'password' ? 'text' : 'password';
+            decryptionKeyInput.type = type;
+        });
+
+        function setProgress(pct, stage) {
+            progressFill.style.width = pct + '%';
+            progressStage.textContent = stage;
+            progressPct.textContent = pct + '%';
+        }
+
+        function showStatus(type, icon, msg) {
+            statusBox.className = 'status-box show ' + type;
+            statusIcon.textContent = icon;
+            statusText.textContent = msg;
+        }
+
+        // Typewriter effect
+        function typeWriter(el, text, speed = 18) {
+            el.textContent = '';
+            let i = 0;
+            const interval = setInterval(() => {
+                el.textContent += text[i];
+                i++;
+                if (i >= text.length) clearInterval(interval);
+            }, speed);
+        }
+
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(decryptedMsg.textContent).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.textContent = 'COPIED!';
+                setTimeout(() => btn.textContent = 'COPY', 1500);
+            });
+        });
+
+        extractBtn.addEventListener('click', async () => {
+            if (!currentFile || !decryptionKeyInput.value) {
+                showStatus('error', '✕', 'PROVIDE BOTH IMAGE AND DECRYPTION KEY');
+                return;
+            }
+
+            extractBtn.disabled = true;
+            outputWrap.classList.remove('show');
+            progressWrap.classList.add('show');
+            scanOverlay.classList.add('active');
+            statusBox.className = 'status-box';
+
+            setProgress(10, 'LOADING IMAGE DATA...');
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setProgress(30, 'SCANNING PIXEL CHANNELS...');
+
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    setProgress(55, 'EXTRACTING LSB BITS...');
+
+                    setTimeout(() => {
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const pixels = imageData.data;
+                        let binaryMessage = '';
+                        let foundMessage = false;
+                        const endBinary = stringToBinary(END_OF_MESSAGE);
+
+                        for (let i = 0; i < pixels.length; i++) {
+                            if ((i + 1) % 4 === 0) continue;
+                            binaryMessage += (pixels[i] & 1);
+
+                            if (binaryMessage.length >= endBinary.length) {
+                                const potentialEnd = binaryToString(binaryMessage);
+                                if (potentialEnd.endsWith(END_OF_MESSAGE)) {
+                                    setProgress(80, 'DECRYPTING PAYLOAD...');
+
+                                    setTimeout(() => {
+                                        const encryptedMessage = potentialEnd.slice(0, -END_OF_MESSAGE.length);
+                                        try {
+                                            const decryptedBytes = CryptoJS.AES.decrypt(
+                                                encryptedMessage,
+                                                decryptionKeyInput.value,
+                                                { mode: CryptoJS.mode.ECB }
+                                            );
+                                            const decrypted = decryptedBytes.toString(CryptoJS.enc.Utf8);
+
+                                            if (decrypted) {
+                                                setProgress(100, 'EXTRACTION COMPLETE');
+                                                setTimeout(() => {
+                                                    progressWrap.classList.remove('show');
+                                                    scanOverlay.classList.remove('active');
+                                                    showStatus('success', '✓', 'PAYLOAD EXTRACTED AND DECRYPTED SUCCESSFULLY');
+                                                    outputWrap.classList.add('show');
+                                                    typeWriter(decryptedMsg, decrypted);
+                                                    document.getElementById('imgStatus').textContent = 'DECODED';
+                                                    extractBtn.disabled = false;
+                                                }, 400);
+                                                foundMessage = true;
+                                            } else {
+                                                throw new Error('Empty result');
+                                            }
+                                        } catch (e) {
+                                            progressWrap.classList.remove('show');
+                                            scanOverlay.classList.remove('active');
+                                            showStatus('error', '✕', 'DECRYPTION FAILED — INVALID KEY OR CORRUPT DATA');
+                                            document.getElementById('imgStatus').textContent = 'KEY ERROR';
+                                            document.getElementById('imgStatus').style.color = '#ff6b6b';
+                                            extractBtn.disabled = false;
+                                        }
+                                    }, 300);
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!foundMessage) {
+                            setTimeout(() => {
+                                progressWrap.classList.remove('show');
+                                scanOverlay.classList.remove('active');
+                                showStatus('error', '✕', 'NO HIDDEN PAYLOAD DETECTED IN THIS IMAGE');
+                                document.getElementById('imgStatus').textContent = 'NO PAYLOAD';
+                                document.getElementById('imgStatus').style.color = '#ff6b6b';
+                                extractBtn.disabled = false;
+                            }, 800);
+                        }
+                    }, 300);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(currentFile);
+        });
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+    </script>
 </body>
 </html>

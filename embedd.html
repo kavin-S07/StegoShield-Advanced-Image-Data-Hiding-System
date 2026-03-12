@@ -2,29 +2,995 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Embed Message</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StegoVault | Embed Message</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <link rel="stylesheet" href="css/embedd.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #020b18;
+            --bg-card: rgba(6, 25, 48, 0.85);
+            --accent-cyan: #00f5ff;
+            --accent-green: #00ff88;
+            --accent-orange: #ff6b35;
+            --text-primary: #e2f0ff;
+            --text-secondary: #6b8caa;
+            --border: rgba(0,245,255,0.14);
+            --grid-color: rgba(0,245,255,0.04);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: 30%;
+            width: 600px; height: 400px;
+            background: radial-gradient(ellipse, rgba(0,100,200,0.12) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .scanline {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+            opacity: 0.3;
+            animation: scanline 5s linear infinite;
+            pointer-events: none;
+            z-index: 200;
+        }
+
+        @keyframes scanline {
+            0% { top: 0; }
+            100% { top: 100vh; }
+        }
+
+        /* TOPBAR */
+        .topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 52px;
+            background: rgba(2,11,24,0.95);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(0,245,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            z-index: 100;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .topbar-logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            letter-spacing: 3px;
+            text-decoration: none;
+        }
+
+        .breadcrumb {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breadcrumb-sep { color: var(--accent-cyan); opacity: 0.4; }
+        .breadcrumb-current { color: var(--accent-cyan); }
+
+        .topbar-mode {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0,245,255,0.25);
+            padding: 4px 12px;
+            border-radius: 2px;
+            background: rgba(0,245,255,0.05);
+            letter-spacing: 2px;
+        }
+
+        /* LAYOUT */
+        .main-layout {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            padding: 80px 20px 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+            align-items: start;
+        }
+
+        /* PANEL */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            animation: fadeIn 0.6s ease both;
+        }
+
+        .panel-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,245,255,0.03);
+        }
+
+        .panel-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        .panel-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            letter-spacing: 2px;
+        }
+
+        .panel-body { padding: 24px; }
+
+        /* DROP ZONE */
+        .drop-zone {
+            position: relative;
+            border: 2px dashed rgba(0,245,255,0.2);
+            border-radius: 6px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(0,245,255,0.02);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .drop-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0,245,255,0.05) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent-cyan);
+            background: rgba(0,245,255,0.06);
+        }
+
+        .drop-zone:hover::before, .drop-zone.dragover::before {
+            opacity: 1;
+        }
+
+        .drop-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            display: block;
+            opacity: 0.7;
+        }
+
+        .drop-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .drop-sub {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .drop-btn {
+            display: inline-block;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+            border: 1px solid rgba(0,245,255,0.3);
+            padding: 6px 16px;
+            border-radius: 2px;
+            letter-spacing: 1.5px;
+            background: rgba(0,245,255,0.05);
+            transition: all 0.2s;
+        }
+
+        .drop-zone:hover .drop-btn {
+            background: rgba(0,245,255,0.12);
+        }
+
+        #embedImageInput { display: none; }
+
+        /* File preview */
+        .file-preview {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0,245,255,0.05);
+            border: 1px solid rgba(0,245,255,0.15);
+            border-radius: 4px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+        }
+
+        .file-preview.show { display: flex; }
+
+        .file-thumb {
+            width: 40px; height: 40px;
+            border-radius: 3px;
+            object-fit: cover;
+            border: 1px solid rgba(0,245,255,0.2);
+        }
+
+        .file-info { flex: 1; }
+        .file-name {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--accent-cyan);
+            word-break: break-all;
+        }
+        .file-size {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .file-remove {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+            background: none;
+            border: none;
+            line-height: 1;
+        }
+
+        .file-remove:hover { color: var(--accent-orange); }
+
+        /* FORM FIELDS */
+        .field-group { margin-bottom: 18px; }
+
+        .field-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .field-label-dot {
+            width: 4px; height: 4px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(0,245,255,0.15);
+            border-radius: 4px;
+            padding: 11px 14px;
+            color: var(--text-primary);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            resize: none;
+        }
+
+        .input-field:focus {
+            border-color: rgba(0,245,255,0.5);
+            box-shadow: 0 0 0 3px rgba(0,245,255,0.06), inset 0 0 12px rgba(0,245,255,0.03);
+        }
+
+        .input-field::placeholder { color: rgba(107,140,170,0.5); }
+
+        .char-counter {
+            display: flex;
+            justify-content: flex-end;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.62rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .char-counter span { color: var(--accent-cyan); }
+
+        /* PASSWORD FIELD */
+        .password-wrapper { position: relative; }
+
+        .password-wrapper .input-field { padding-right: 44px; }
+
+        .toggle-pass {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+
+        .toggle-pass:hover { color: var(--accent-cyan); }
+
+        /* KEY STRENGTH */
+        .key-strength {
+            display: flex;
+            gap: 3px;
+            margin-top: 6px;
+        }
+
+        .strength-bar {
+            flex: 1;
+            height: 3px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 2px;
+            transition: background 0.3s;
+        }
+
+        .strength-bar.weak { background: #ff4444; }
+        .strength-bar.medium { background: #ffaa00; }
+        .strength-bar.strong { background: var(--accent-green); }
+
+        .strength-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        /* SUBMIT BUTTON */
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #0066cc, var(--accent-cyan));
+            border: none;
+            border-radius: 4px;
+            color: #020b18;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.4s;
+        }
+
+        .submit-btn:hover::before { left: 100%; }
+        .submit-btn:hover { box-shadow: 0 0 24px rgba(0,245,255,0.4); transform: translateY(-1px); }
+        .submit-btn:active { transform: translateY(0); }
+        .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* STATUS */
+        .status-box {
+            display: none;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-top: 16px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.72rem;
+            letter-spacing: 0.5px;
+            line-height: 1.5;
+            animation: statusIn 0.3s ease;
+        }
+
+        .status-box.show { display: flex; }
+
+        @keyframes statusIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status-box.processing {
+            background: rgba(0,245,255,0.06);
+            border: 1px solid rgba(0,245,255,0.2);
+            color: var(--accent-cyan);
+        }
+
+        .status-box.success {
+            background: rgba(0,255,136,0.06);
+            border: 1px solid rgba(0,255,136,0.2);
+            color: var(--accent-green);
+        }
+
+        .status-box.error {
+            background: rgba(255,68,68,0.06);
+            border: 1px solid rgba(255,68,68,0.2);
+            color: #ff6b6b;
+        }
+
+        .status-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+        /* PROGRESS BAR */
+        .progress-wrap {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .progress-wrap.show { display: block; }
+
+        .progress-bar-bg {
+            background: rgba(0,245,255,0.08);
+            border-radius: 2px;
+            height: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0066cc, var(--accent-cyan));
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 8px var(--accent-cyan);
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* DOWNLOAD BUTTON */
+        .download-btn {
+            display: none;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #006644, var(--accent-green));
+            border: none;
+            border-radius: 4px;
+            color: #020b18;
+            font-family: 'Orbitron', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            margin-top: 12px;
+            transition: all 0.3s;
+        }
+
+        .download-btn:hover {
+            box-shadow: 0 0 24px rgba(0,255,136,0.4);
+            transform: translateY(-1px);
+        }
+
+        .download-btn.show { display: block; }
+
+        /* PREVIEW PANEL */
+        .preview-panel { position: sticky; top: 72px; }
+
+        .preview-canvas-wrap {
+            position: relative;
+            min-height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #embedCanvas {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .canvas-placeholder {
+            text-align: center;
+        }
+
+        .placeholder-icon {
+            font-size: 3rem;
+            opacity: 0.2;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .placeholder-text {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            letter-spacing: 1.5px;
+        }
+
+        /* INFO CARDS */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .info-card {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(0,245,255,0.08);
+            border-radius: 4px;
+            padding: 10px 12px;
+        }
+
+        .info-card-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.58rem;
+            color: var(--text-secondary);
+            letter-spacing: 1.5px;
+            margin-bottom: 3px;
+        }
+
+        .info-card-value {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--accent-cyan);
+        }
+
+        .info-card-value.dim { color: var(--text-secondary); }
+
+        /* HOME LINK */
+        .home-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-top: 16px;
+            padding: 8px 12px;
+            border: 1px solid rgba(0,245,255,0.08);
+            border-radius: 4px;
+            transition: all 0.2s;
+            letter-spacing: 1px;
+        }
+
+        .home-link:hover {
+            color: var(--accent-cyan);
+            border-color: rgba(0,245,255,0.25);
+            background: rgba(0,245,255,0.04);
+        }
+
+        /* SPINNER */
+        .spinner {
+            width: 14px; height: 14px;
+            border: 2px solid rgba(0,245,255,0.2);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel:nth-child(2) { animation-delay: 0.15s; }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            .preview-panel { position: static; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="title">Embed a Message</h1>
-        <p class="label">Choose a PNG Image file:</p>
-        <input type="file" id="embedImageInput" accept="image/png" class="input-file">
-        <p class="label">Enter the message to embed:</p>
-        <textarea id="messageInput" rows="3" class="input-text"></textarea>
-        <p class="label">Enter the encryption key:</p>
-        <input type="password" id="encryptionKeyInput" placeholder="Encryption Key" class="input-password">
-        <button id="embedBtn" class="button">Embed</button>
-        <p id="embedStatus" class="status-message"></p>
-        <canvas id="embedCanvas" style="display:none;"></canvas>
-        <a id="downloadLink" download="stego.png" class="download-link">Download Stego Image</a>
+    <div class="scanline"></div>
 
-        <div class="home-link-wrapper">
-            <a href="index.html" class="home-link">Go to Home Page</a>
+    <div class="topbar">
+        <div class="topbar-left">
+            <a href="index.html" class="topbar-logo">StegoVault</a>
+            <div class="breadcrumb">
+                <span class="breadcrumb-sep">/</span>
+                <span class="breadcrumb-current">EMBED MESSAGE</span>
+            </div>
+        </div>
+        <div class="topbar-mode">ENCODE MODE</div>
+    </div>
+
+    <div class="main-layout">
+        <!-- LEFT: FORM -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-dot"></div>
+                <div class="panel-title">PAYLOAD CONFIGURATION</div>
+            </div>
+            <div class="panel-body">
+
+                <!-- Drop Zone -->
+                <div class="drop-zone" id="dropZone">
+                    <span class="drop-icon">⬡</span>
+                    <div class="drop-title">SELECT CARRIER IMAGE</div>
+                    <p class="drop-sub">Drag and drop a PNG file here</p>
+                    <div class="drop-btn">BROWSE FILES</div>
+                    <input type="file" id="embedImageInput" accept="image/png">
+                </div>
+
+                <div class="file-preview" id="filePreview">
+                    <img class="file-thumb" id="fileThumb" src="" alt="">
+                    <div class="file-info">
+                        <div class="file-name" id="fileName">—</div>
+                        <div class="file-size" id="fileSize">—</div>
+                    </div>
+                    <button class="file-remove" id="fileRemove">✕</button>
+                </div>
+
+                <div class="field-group">
+                    <div class="field-label">
+                        <div class="field-label-dot"></div>
+                        SECRET MESSAGE
+                    </div>
+                    <textarea id="messageInput" class="input-field" rows="4" placeholder="Enter the message to conceal..."></textarea>
+                    <div class="char-counter">CHARS: <span id="charCount">0</span></div>
+                </div>
+
+                <div class="field-group">
+                    <div class="field-label">
+                        <div class="field-label-dot"></div>
+                        ENCRYPTION KEY
+                    </div>
+                    <div class="password-wrapper">
+                        <input type="password" id="encryptionKeyInput" class="input-field" placeholder="Enter a strong encryption key...">
+                        <button class="toggle-pass" id="togglePass" title="Toggle visibility">👁</button>
+                    </div>
+                    <div class="key-strength">
+                        <div class="strength-bar" id="sb1"></div>
+                        <div class="strength-bar" id="sb2"></div>
+                        <div class="strength-bar" id="sb3"></div>
+                        <div class="strength-bar" id="sb4"></div>
+                    </div>
+                    <div class="strength-label" id="strengthLabel">KEY STRENGTH: —</div>
+                </div>
+
+                <button class="submit-btn" id="embedBtn">EMBED PAYLOAD</button>
+
+                <div class="progress-wrap" id="progressWrap">
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-label">
+                        <span id="progressStage">INITIALIZING...</span>
+                        <span id="progressPct">0%</span>
+                    </div>
+                </div>
+
+                <div class="status-box" id="embedStatus">
+                    <div class="status-icon" id="statusIcon"></div>
+                    <div id="statusText"></div>
+                </div>
+
+                <a id="downloadLink" download="stego.png" class="download-btn">⬇ DOWNLOAD STEGO IMAGE</a>
+
+                <a href="index.html" class="home-link">← RETURN TO BASE</a>
+
+            </div>
+        </div>
+
+        <!-- RIGHT: PREVIEW -->
+        <div class="panel preview-panel">
+            <div class="panel-header">
+                <div class="panel-dot"></div>
+                <div class="panel-title">IMAGE PREVIEW</div>
+            </div>
+            <div class="panel-body">
+                <div class="preview-canvas-wrap">
+                    <canvas id="embedCanvas"></canvas>
+                    <div class="canvas-placeholder" id="canvasPlaceholder">
+                        <span class="placeholder-icon">⬡</span>
+                        <div class="placeholder-text">NO IMAGE LOADED</div>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-card-label">DIMENSIONS</div>
+                        <div class="info-card-value" id="imgDimensions">—</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-label">CAPACITY</div>
+                        <div class="info-card-value" id="imgCapacity">—</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-label">PAYLOAD SIZE</div>
+                        <div class="info-card-value" id="payloadSize">—</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-card-label">STATUS</div>
+                        <div class="info-card-value dim" id="imgStatus">AWAITING INPUT</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    
-    <script src="js/embedd.js"></script>
+
+    <script>
+        const embedImageInput = document.getElementById('embedImageInput');
+        const messageInput = document.getElementById('messageInput');
+        const encryptionKeyInput = document.getElementById('encryptionKeyInput');
+        const embedBtn = document.getElementById('embedBtn');
+        const embedCanvas = document.getElementById('embedCanvas');
+        const downloadLink = document.getElementById('downloadLink');
+        const dropZone = document.getElementById('dropZone');
+        const filePreview = document.getElementById('filePreview');
+        const progressWrap = document.getElementById('progressWrap');
+        const progressFill = document.getElementById('progressFill');
+        const progressStage = document.getElementById('progressStage');
+        const progressPct = document.getElementById('progressPct');
+        const statusBox = document.getElementById('embedStatus');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusText = document.getElementById('statusText');
+        const END_OF_MESSAGE = '#####END_OF_MESSAGE#####';
+
+        const stringToBinary = (str) => str.split('').map(c => c.charCodeAt(0).toString(2).padStart(8,'0')).join('');
+
+        let currentFile = null;
+
+        // Drop zone
+        dropZone.addEventListener('click', () => embedImageInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'image/png') handleFile(file);
+            else showStatus('error', '✕', 'INVALID FILE TYPE — PNG ONLY');
+        });
+
+        embedImageInput.addEventListener('change', () => {
+            if (embedImageInput.files[0]) handleFile(embedImageInput.files[0]);
+        });
+
+        function handleFile(file) {
+            currentFile = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('fileThumb').src = e.target.result;
+                document.getElementById('fileName').textContent = file.name;
+                document.getElementById('fileSize').textContent = formatBytes(file.size);
+                filePreview.classList.add('show');
+                dropZone.style.display = 'none';
+
+                // Show preview
+                const img = new Image();
+                img.onload = () => {
+                    embedCanvas.width = img.width;
+                    embedCanvas.height = img.height;
+                    const ctx = embedCanvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    embedCanvas.style.display = 'block';
+                    document.getElementById('canvasPlaceholder').style.display = 'none';
+                    document.getElementById('imgDimensions').textContent = `${img.width}×${img.height}`;
+                    const cap = Math.floor((img.width * img.height * 3) / 8);
+                    document.getElementById('imgCapacity').textContent = formatBytes(cap);
+                    document.getElementById('imgStatus').textContent = 'READY';
+                    document.getElementById('imgStatus').style.color = 'var(--accent-cyan)';
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('fileRemove').addEventListener('click', () => {
+            currentFile = null;
+            filePreview.classList.remove('show');
+            dropZone.style.display = '';
+            embedCanvas.style.display = 'none';
+            document.getElementById('canvasPlaceholder').style.display = '';
+            document.getElementById('imgDimensions').textContent = '—';
+            document.getElementById('imgCapacity').textContent = '—';
+            document.getElementById('payloadSize').textContent = '—';
+            document.getElementById('imgStatus').textContent = 'AWAITING INPUT';
+            document.getElementById('imgStatus').style.color = '';
+            embedImageInput.value = '';
+        });
+
+        // Char counter
+        messageInput.addEventListener('input', () => {
+            document.getElementById('charCount').textContent = messageInput.value.length;
+            document.getElementById('payloadSize').textContent = formatBytes(messageInput.value.length);
+        });
+
+        // Password strength
+        encryptionKeyInput.addEventListener('input', updateStrength);
+
+        function updateStrength() {
+            const val = encryptionKeyInput.value;
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (val.length >= 12) score++;
+            if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+            if (/[^a-zA-Z0-9]/.test(val)) score++;
+            const labels = ['—', 'WEAK', 'MODERATE', 'STRONG', 'MAXIMUM'];
+            const cls = ['', 'weak', 'medium', 'strong', 'strong'];
+            document.getElementById('strengthLabel').textContent = 'KEY STRENGTH: ' + (val ? labels[score] : '—');
+            ['sb1','sb2','sb3','sb4'].forEach((id, i) => {
+                const el = document.getElementById(id);
+                el.className = 'strength-bar' + (i < score ? ' ' + cls[score] : '');
+            });
+        }
+
+        // Toggle password
+        document.getElementById('togglePass').addEventListener('click', () => {
+            const type = encryptionKeyInput.type === 'password' ? 'text' : 'password';
+            encryptionKeyInput.type = type;
+        });
+
+        function setProgress(pct, stage) {
+            progressFill.style.width = pct + '%';
+            progressStage.textContent = stage;
+            progressPct.textContent = pct + '%';
+        }
+
+        function showStatus(type, icon, msg) {
+            statusBox.className = 'status-box show ' + type;
+            statusIcon.textContent = icon;
+            statusText.textContent = msg;
+        }
+
+        embedBtn.addEventListener('click', async () => {
+            if (!currentFile || !messageInput.value.trim() || !encryptionKeyInput.value) {
+                showStatus('error', '✕', 'ALL FIELDS REQUIRED — SELECT IMAGE, MESSAGE & KEY');
+                return;
+            }
+
+            embedBtn.disabled = true;
+            downloadLink.classList.remove('show');
+            progressWrap.classList.add('show');
+            statusBox.className = 'status-box';
+
+            setProgress(10, 'READING IMAGE DATA...');
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                setProgress(25, 'ENCRYPTING PAYLOAD...');
+
+                const encryptedMessage = CryptoJS.AES.encrypt(
+                    messageInput.value.trim(),
+                    encryptionKeyInput.value,
+                    { mode: CryptoJS.mode.ECB }
+                ).toString();
+                const messageToEmbed = encryptedMessage + END_OF_MESSAGE;
+
+                setTimeout(() => {
+                    setProgress(45, 'LOADING CARRIER IMAGE...');
+
+                    const img = new Image();
+                    img.onload = () => {
+                        embedCanvas.width = img.width;
+                        embedCanvas.height = img.height;
+                        const ctx = embedCanvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                        embedCanvas.style.display = 'block';
+                        document.getElementById('canvasPlaceholder').style.display = 'none';
+
+                        setProgress(60, 'PERFORMING LSB INJECTION...');
+
+                        setTimeout(() => {
+                            const imageData = ctx.getImageData(0, 0, embedCanvas.width, embedCanvas.height);
+                            const pixels = imageData.data;
+                            const binaryMessage = stringToBinary(messageToEmbed);
+
+                            if (binaryMessage.length > pixels.length / 4 * 3) {
+                                showStatus('error', '✕', 'PAYLOAD TOO LARGE — SELECT A LARGER IMAGE');
+                                progressWrap.classList.remove('show');
+                                embedBtn.disabled = false;
+                                return;
+                            }
+
+                            let messageIndex = 0;
+                            for (let i = 0; i < pixels.length && messageIndex < binaryMessage.length; i++) {
+                                if ((i + 1) % 4 === 0) continue;
+                                pixels[i] = (pixels[i] & 0xFE) | parseInt(binaryMessage[messageIndex]);
+                                messageIndex++;
+                            }
+
+                            ctx.putImageData(imageData, 0, 0);
+                            setProgress(90, 'GENERATING STEGO IMAGE...');
+
+                            setTimeout(() => {
+                                const url = embedCanvas.toDataURL('image/png');
+                                downloadLink.href = url;
+                                setProgress(100, 'OPERATION COMPLETE');
+
+                                setTimeout(() => {
+                                    progressWrap.classList.remove('show');
+                                    showStatus('success', '✓', 'PAYLOAD EMBEDDED SUCCESSFULLY — STEGO IMAGE READY FOR DOWNLOAD');
+                                    downloadLink.classList.add('show');
+                                    embedBtn.disabled = false;
+                                    document.getElementById('imgStatus').textContent = 'ENCODED';
+                                    document.getElementById('imgStatus').style.color = 'var(--accent-green)';
+                                }, 400);
+                            }, 300);
+                        }, 200);
+                    };
+                    img.src = event.target.result;
+                }, 200);
+            };
+            reader.readAsDataURL(currentFile);
+        });
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+    </script>
 </body>
 </html>
