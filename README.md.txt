@@ -1,42 +1,398 @@
-# Image Steganography Project 🎨🔒
+# 🔐 Secure Image Steganography Using AES Encryption
 
-This project is a web-based application for hiding messages inside image files using steganography. It uses the **Least Significant Bit (LSB)** technique to embed a secret message within the image data and employs **AES encryption** to secure the message.
+> A web-based steganography application that securely hides encrypted messages inside images using AES encryption and Least Significant Bit (LSB) image steganography.
 
-The application is built using plain HTML, CSS, and JavaScript, making it simple to run and understand.
-
-## Features ✨
-
-- **Embed a Message:** Encrypt a text message with a key and hide it inside a PNG image.
-- **Extract a Message:** Decrypt and retrieve the hidden message from a steganographic PNG image using the correct key.
-- **Secure:** Messages are protected with AES encryption. If an incorrect key is used for extraction, the encrypted message is displayed, preventing unauthorized access to the plaintext.
-- **User-Friendly Interface:** The application has a clean and simple interface, making the process of embedding and extracting messages straightforward.
-
-## How It Works 🧠
-
-- **Embedding:** The application takes a message and an encryption key, encrypts the message using **CryptoJS AES encryption**, and then converts the encrypted text into a binary string. It iterates through the pixel data of the image and modifies the least significant bit of each color channel (red, green, blue) to encode the binary data. A special end-of-message marker is added to signal where the hidden message ends.
-- **Extracting:** The application reads the pixel data from the steganographic image, extracts the least significant bits, and reconstructs the binary string. It then checks for the end-of-message marker to determine the length of the hidden data. Finally, it uses the provided decryption key to attempt to decrypt the message.
-
-## Project Structure 📂
-
-The project is organized into three main folders:
-
-- `css/`: Contains the stylesheets for each HTML page (`index.css`, `embedd.css`, `extract.css`).
-- `js/`: Contains the JavaScript logic for embedding (`embedd.js`) and extracting (`extract.js`) messages.
-- `html files`: The main web pages (`index.html`, `embedd.html`, `extract.html`) that structure the user interface.
-
-## Getting Started 🚀
-
-To use this project, simply download or clone the repository and open the `index.html` file in a web browser.
-
-1.  **Open `index.html`:** This will take you to the main home page.
-2.  **Embed a Message:** Click "Embed a Message," select a PNG image, type your secret message and an encryption key, and click "Embed." The application will generate a new image for you to download.
-3.  **Extract a Message:** Click "Extract a Message," upload the steganographic image, enter the correct decryption key, and click "Extract." The hidden message will appear in the text area. If the key is wrong, you will see the garbled, encrypted message.
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6-yellow)
+![HTML5](https://img.shields.io/badge/HTML5-Web%20Application-orange)
+![CSS3](https://img.shields.io/badge/CSS3-Frontend-blue)
+![CryptoJS](https://img.shields.io/badge/CryptoJS-AES%20Encryption-green)
 
 ---
 
-### Technologies Used 💻
+# 📖 Project Overview
 
-- **HTML:** For the page structure.
-- **CSS:** For styling the user interface.
-- **JavaScript:** For the core steganography and encryption logic.
-- **CryptoJS:** A third-party library used for AES encryption and decryption.
+This project combines **Cryptography** and **Steganography** to provide a secure way of transmitting secret messages.
+
+Before hiding a message inside an image:
+
+1. The message is encrypted using AES encryption.
+2. The encrypted text is embedded into the image using LSB (Least Significant Bit) steganography.
+3. The modified image appears visually identical to the original image.
+4. Only users with the correct secret key can extract and decrypt the hidden message.
+
+---
+
+# 🌟 Features
+
+✅ Hide Secret Messages Inside Images
+
+✅ AES Encryption for Enhanced Security
+
+✅ LSB-Based Image Steganography
+
+✅ Password-Protected Message Extraction
+
+✅ PNG Image Support
+
+✅ Browser-Based Processing
+
+✅ No Server Required
+
+✅ Fast and Lightweight
+
+---
+
+# 🛠 Technologies Used
+
+| Technology     | Purpose               |
+| -------------- | --------------------- |
+| HTML5          | User Interface        |
+| CSS3           | Styling               |
+| JavaScript     | Application Logic     |
+| CryptoJS       | AES Encryption        |
+| Canvas API     | Image Processing      |
+| FileReader API | Image Upload Handling |
+
+---
+
+# 🔒 Security Architecture
+
+```text
+User Message
+      │
+      ▼
+AES Encryption
+      │
+      ▼
+Encrypted Cipher Text
+      │
+      ▼
+LSB Steganography
+      │
+      ▼
+Image Embedding
+      │
+      ▼
+Stego Image
+```
+
+### Extraction Process
+
+```text
+Stego Image
+      │
+      ▼
+LSB Extraction
+      │
+      ▼
+Encrypted Cipher Text
+      │
+      ▼
+AES Decryption
+      │
+      ▼
+Original Secret Message
+```
+
+---
+
+# 🧠 How It Works
+
+## Step 1: Message Encryption
+
+The user enters:
+
+* Secret Message
+* Encryption Key
+
+The message is encrypted using:
+
+```javascript
+CryptoJS.AES.encrypt(message, key)
+```
+
+Example:
+
+```text
+Original Message:
+Hello World
+
+Encrypted:
+U2FsdGVkX19aP4mXx....
+```
+
+---
+
+## Step 2: Binary Conversion
+
+The encrypted message is converted into binary format.
+
+Example:
+
+```text
+A = 01000001
+B = 01000010
+```
+
+---
+
+## Step 3: LSB Embedding
+
+The binary message is hidden inside image pixels.
+
+Original Pixel:
+
+```text
+11001010
+```
+
+After Embedding:
+
+```text
+11001011
+```
+
+Only the least significant bit changes, making the modification invisible to the human eye.
+
+---
+
+## Step 4: Image Generation
+
+The modified image is generated and made available for download.
+
+The visual appearance remains unchanged while carrying hidden encrypted data.
+
+---
+
+## Step 5: Message Extraction
+
+The receiver uploads the stego image.
+
+The application:
+
+* Reads pixel data
+* Extracts hidden bits
+* Reconstructs encrypted text
+* Detects message termination marker
+
+---
+
+## Step 6: AES Decryption
+
+Using the correct secret key:
+
+```javascript
+CryptoJS.AES.decrypt(cipherText, key)
+```
+
+The original message is recovered.
+
+---
+
+# 📂 Project Structure
+
+```bash
+Secure-Steganography/
+│
+├── index.html
+├── embed.js
+├── extract.js
+├── style.css
+│
+├── images/
+│   ├── sample.png
+│   └── output.png
+│
+└── README.md
+```
+
+---
+
+# 🚀 Installation
+
+## Clone Repository
+
+```bash
+git clone https://github.com/yourusername/secure-image-steganography.git
+```
+
+## Open Project
+
+Simply open:
+
+```bash
+index.html
+```
+
+in your browser.
+
+No server setup is required.
+
+---
+
+# 📋 Usage Guide
+
+## Embed a Secret Message
+
+### Step 1
+
+Upload an image.
+
+### Step 2
+
+Enter a secret message.
+
+### Step 3
+
+Enter an encryption key.
+
+### Step 4
+
+Click:
+
+```text
+Embed Message
+```
+
+### Step 5
+
+Download the generated image.
+
+---
+
+## Extract a Secret Message
+
+### Step 1
+
+Upload the stego image.
+
+### Step 2
+
+Enter the correct decryption key.
+
+### Step 3
+
+Click:
+
+```text
+Extract Message
+```
+
+### Step 4
+
+View the decrypted secret message.
+
+---
+
+# 🔑 Encryption Details
+
+Algorithm Used:
+
+```text
+AES (Advanced Encryption Standard)
+```
+
+Mode:
+
+```text
+ECB Mode
+```
+
+Library:
+
+```javascript
+CryptoJS
+```
+
+Key Features:
+
+* Fast Encryption
+* Strong Security
+* Password-Based Access
+* Secure Message Storage
+
+---
+
+# 📊 Advantages
+
+✔ Dual Security Layer
+
+✔ Data Hidden Inside Images
+
+✔ Encrypted Before Embedding
+
+✔ Difficult to Detect
+
+✔ Browser-Based Processing
+
+✔ No Data Stored on Server
+
+---
+
+# 📸 Screenshots
+
+## Home Page
+
+Add Screenshot Here
+
+```text
+screenshots/home.png
+```
+
+## Message Embedding
+
+Add Screenshot Here
+
+```text
+screenshots/embed.png
+```
+
+## Message Extraction
+
+Add Screenshot Here
+
+```text
+screenshots/extract.png
+```
+
+---
+
+# 🔮 Future Enhancements
+
+* Multiple Image Formats Support
+* Drag-and-Drop Upload
+* Audio Steganography
+* Video Steganography
+* AES-256 Encryption
+* Dark Mode UI
+* Image Compression Detection
+* Mobile Application Version
+
+---
+
+# 🎯 Applications
+
+* Secure Communication
+* Military Information Transfer
+* Digital Watermarking
+* Cybersecurity Projects
+* Privacy Protection
+* Educational Research
+
+---
+
+# 👨‍💻 Developer
+
+**Kavin S**
+
+B.E Computer Science and Engineering
+
+Coimbatore Institute of Technology
+
+---
+
+# 📜 License
+
+This project is licensed under the MIT License.
+
+⭐ If you found this project useful, consider giving it a star on GitHub!
